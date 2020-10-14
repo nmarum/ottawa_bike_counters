@@ -30,5 +30,6 @@ head(dat)
 dat <- dat[1:28776,] #selecting entries to end of 2018, which contain weather data.
 
 save(dat, file = "dat.rda") #save the data file for analysis.
+rm("df", "df2")
 
 
