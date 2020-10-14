@@ -9,11 +9,18 @@ dat %>%
             prop_zerocount = mean(count==0),
             entries = n()) %>%
   arrange(desc(entries))  
-#Shows the corktown footbridge counter as the one with the most entries
-#also has a relatively low proportion of 0 count entries (1.7%).
-#While not the busiest counter, the relatively consistent entries seem promising.
-#3_COBY: NCC Eastern Canal Pathway approximately 100m north of the Corktown Bridge. 
-#WINTER counter
+#Shows the bike counter along Colonel By Drive near the Corktown footbridge (COBY) 
+#as the counter with the most overall entries/fewest missing entries.
+#COBY also has a relatively low proportion of "0" count/no bike entries (1.7%).
+#While not the busiest counter, the consistent entries seem promising from a 
+#predictive perspective.
+
+#A city of Ottawa legend for the bike counter data provides the following description
+#for the COBY counter:  "3_COBY: National Capital Commission (NCC) Eastern Canal 
+#Pathway approximately 100m north of the Corktown Bridge. #WINTER counter"
+
+#"The data provides counts of bike trips (both directions summed unless otherwise 
+#noted)" COBY has not footnote associated with it so the data must be both directions.
 
 coby <- dat %>% filter(location_name == "COBY")
 
@@ -22,15 +29,18 @@ hist(dat$count)
 #distribution of coby is similar though not as smooth as the overall dist of trips
 
 dat %>% filter(location_name == c("COBY", "LMET", "LLYN", "LBAY", "SOMO", "ADAWE BIKE")) %>%
-  ggplot(aes(count, col=location_name)) + geom_density() #selecting for winter counters
+  ggplot(aes(count, col=location_name)) + geom_density() 
+#selecting for winter counters
+
 coby %>% ggplot(aes(count, col=location_name)) + geom_density()
 #density plot coby counts follows similar patter as most other winter counters
 
-median(coby$count)
-median(dat$count)
-mean(coby$count)
-mean(dat$count)
-#median and mean of coby was similar to overall 
+coby_rides <- c(median(coby$count), mean(coby$count))
+total_rides <- c(median(dat$count), mean(dat$count))
+diff <- c(median(coby$count)-median(dat$count), mean(coby$count)-mean(dat$count))
+data.frame(coby_rides, total_rides, diff, row.names = c("median", "mean"))
+
+#median and mean of coby counts are similar to overall counts
 
 #Predictive model created by coby data should have applicability to other 
 #winter counters
@@ -74,9 +84,6 @@ coby %>% mutate(year = year(date), month = month(date)) %>%
 #Would have to create a factor with discrete levels...
 
 
-head(coby)
-tail(coby)
 
-coby %>% group_by(day_of_week) %>% summarize(count = sum(count))
 
 
