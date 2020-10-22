@@ -24,7 +24,7 @@ df <- cbind(df, df2)
 colnames(df) <- c("day", "date")
 head(df)
 
-dat <- dat %>% left_join(df, by="day") #adding a actual date field rather than day of year
+dat <- dat %>% left_join(df, by="day") #adding a actual date field rather than just using day of year
 #I am hoping this will make data exploration easier.
 head(dat)
 dat <- dat[1:28776,] #selecting entries to end of 2018, which contain weather data.
