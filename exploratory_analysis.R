@@ -42,6 +42,10 @@ data.frame(coby_rides, total_rides, diff, row.names = c("median", "mean"))
 
 #median and mean of coby counts are similar to overall counts
 
+sd(coby$count)
+sd(dat$count)
+#sd is similar as well.  814 rides.  Quite a large range in terms of overall count.
+
 #Predictive model created by coby data should have applicability to other 
 #winter counters
 
@@ -112,6 +116,34 @@ coby %>% mutate(year = year(date), month = month(date)) %>%
 #significantly.
 
 
+#lets take a look at rides by temp stratified
+temp_levels <- coby %>% 
+  mutate(maxtemp_levels = factor(round(MaxTemp/10, digits=0)))
+
+#labelling factor levels
+levels(temp_levels$maxtemp_levels) <- c("-20", "-10", "0", "10", "20", "30", "40","NaN")
+
+temp_levels %>% mutate(year = year(date), month = month(date)) %>%
+  filter(maxtemp_levels %in% c("-20", "-10", "0", "10", "20", "30", "40")) %>%
+  ggplot(aes(MaxTemp, count)) +
+  geom_point(alpha=.5) +
+  geom_smooth(method = "loess") +
+  ggtitle("Col By Bike Counter - Count of rides by Max Temp")
+
+#Visualizing ride counts over the course of the year stratified by temp
+temp_levels %>% mutate(year = year(date), month = month(date)) %>%
+  filter(maxtemp_levels %in% c("-20", "-10", "0", "10", "20", "30")) %>%
+  ggplot(aes(day_of_year, count)) +
+  geom_point(alpha=.5) +
+  geom_smooth(method = "loess") +
+  facet_wrap(facets = maxtemp_levels~.) +
+  ggtitle("Col By - Rides by Day of the Year Stratified by Max Temp")
+#we can see that warmer days are clustered in summer months and have more rides
+#days in the same temperature range have a very wide variability
+
+
+
+
 #running a series of pairwise correlations by various predictors
 day_of_year <- cor(coby$count, coby$day_of_year, use = "pairwise.complete.obs", method = "spearman")
 day_of_week <- cor(coby$count, coby$day_of_week, use="pairwise.complete.obs", method = "spearman")
@@ -124,7 +156,7 @@ Total_Snowcm <- cor(coby$TotalSnowcm, coby$count, use = "pairwise.complete.obs",
 Snow_on_Grd <- cor(coby$SnowonGrndcm, coby$count, use = "pairwise.complete.obs", method = "spearman")
 
 #create a data.frame with all the Spearman correlations
-data.frame(day_of_year, day_of_week, Max_Temp, Mean_Temp, Min_Temp, Total_Precipmm, Total_Rainmm, Total_Snowcm, Snow_on_Grd, row.names = "Correlation with Rides")
+data.frame(day_of_year, day_of_week, Max_Temp, Mean_Temp, Min_Temp, Total_Precipmm, Total_Rainmm, Total_Snowcm, Snow_on_Grd, row.names = "Spear Cor with Rides")
 #The Spearman correlation was used in order to help control for outliers by computing correlation based 
 #on the ranks of values, of which there seem to be many in the data.
 
