@@ -140,6 +140,36 @@ RMSE(knn_res2, test$count)
 #a quick heuristic to indicate how many riders to expect on a given day using the
 #regression tree model would be very attractive and its performance is not that far 
 #off more sophisticated methods like KNN.
+=======
+
+bayes_glm_cv <- train(count ~ MaxTemp + day_of_year + SnowonGrndcm, method = "bayesglm", 
+               data = train, na.action = na.omit, #omit NAs
+               trControl = control)
+ggplot(bayes_glm_cv, highlight = TRUE)
+bayes_glm_cv$results #no tuning parameters = RMSE 472
+
+lm_cv <- train(count ~ MaxTemp + day_of_year + SnowonGrndcm, method = "lm", 
+                           data = train, na.action = na.omit, #omit NAs
+                           trControl = control)
+lm_cv$results #no tuning - simple linear regression - RMSE 471
+
+rpart2_cv <- train(count ~ MaxTemp + day_of_year + SnowonGrndcm, method = "rpart2", 
+               data = train, na.action = na.omit, #omit NAs
+               tuneGrid = data.frame(maxdepth = seq(1:10)),
+               trControl = control)
+
+ggplot(rpart2_cv, highlight = TRUE)
+rpart2_cv$results #best tune is Max depth of 4 and RMSE of 443
+
+#visualizing a regression tree for this.
+fit <- rpart(count ~ MaxTemp + day_of_year + SnowonGrndcm, data = coby)
+
+plot(fit, compress = TRUE, margin = .1)
+text(fit)
+#Easily interpretable but day of year is not used.  Given clear pattern from day of 
+#year we see in the data, this impacts the effectiveness of the regression tree.
+
+#using k nearest neighbours using primary predictors provides for the best results.
 
 #ways to further improve the performance would be to find some way to model the effects
 #of holidays or other significant annual festivals and events would have on traffic.
