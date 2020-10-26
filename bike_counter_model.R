@@ -115,7 +115,10 @@ knn_meantemp$bestTune
 #we will use KNN and the Rtree on the test set to get a sense of the algorithms true 
 #accuracy.
 
-fit_final <- rpart(count ~ MeanTemp + day_of_year + SnowonGrndcm, data = coby)
+
+#final models
+
+fit_final <- rpart(count ~ MaxTemp + day_of_year + SnowonGrndcm, data = coby)
 
 rtree_res <- predict(fit_final, newdata = test, type = "vector")
 RMSE(rtree_res, test$count)
@@ -140,37 +143,54 @@ RMSE(knn_res2, test$count)
 #a quick heuristic to indicate how many riders to expect on a given day using the
 #regression tree model would be very attractive and its performance is not that far 
 #off more sophisticated methods like KNN.
-=======
 
-bayes_glm_cv <- train(count ~ MaxTemp + day_of_year + SnowonGrndcm, method = "bayesglm", 
-               data = train, na.action = na.omit, #omit NAs
-               trControl = control)
-ggplot(bayes_glm_cv, highlight = TRUE)
-bayes_glm_cv$results #no tuning parameters = RMSE 472
+#this model is based on one bike counter.  However we can see how well it applies on
+#another winter bike counter in the Ottawa area for fun!
 
-lm_cv <- train(count ~ MaxTemp + day_of_year + SnowonGrndcm, method = "lm", 
-                           data = train, na.action = na.omit, #omit NAs
-                           trControl = control)
-lm_cv$results #no tuning - simple linear regression - RMSE 471
+#The Ottawa river bike counter had the second most number of entries.
 
-rpart2_cv <- train(count ~ MaxTemp + day_of_year + SnowonGrndcm, method = "rpart2", 
-               data = train, na.action = na.omit, #omit NAs
-               tuneGrid = data.frame(maxdepth = seq(1:10)),
-               trControl = control)
+ORPY <- dat %>% filter(location_name == "ORPY", !is.na(SnowonGrndcm), !is.na(TotalSnowcm))
+statistic <- c("min", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max.")
+tibble(statistic, summary(ORPY$count), summary(coby$count))
+#we can see that on average the Ottawa River pathway has more riders, with higher median,
+#mean and max number of rides than the Col By pathway.  However rides appear more
+#skewed with a greater distance between the mean and median.
 
-ggplot(rpart2_cv, highlight = TRUE)
-rpart2_cv$results #best tune is Max depth of 4 and RMSE of 443
+tibble(sd(ORPY$count), sd(coby$count))
+#The Ottawa river pathway also has a higher standard deviation, suggesting greater variablity.
 
-#visualizing a regression tree for this.
-fit <- rpart(count ~ MaxTemp + day_of_year + SnowonGrndcm, data = coby)
 
-plot(fit, compress = TRUE, margin = .1)
-text(fit)
-#Easily interpretable but day of year is not used.  Given clear pattern from day of 
-#year we see in the data, this impacts the effectiveness of the regression tree.
+set.seed(20201021, sample.kind = "Rounding")
+ind <- createDataPartition(ORPY$count, p=.9, list = FALSE)
 
-#using k nearest neighbours using primary predictors provides for the best results.
+train_o <- ORPY[ind,]
+test_o <- ORPY[-ind,]
+
+fit_final_o <- rpart(count ~ MaxTemp + day_of_year + SnowonGrndcm, data = train_o)
+
+rtree_res_o <- predict(fit_final_o, newdata = test_o, type = "vector")
+RMSE(rtree_res_o, test_o$count) #RMSE of 618 - higher RMSE than the COBY,
+
+plot(fit_final_o, compress = TRUE, margin = .1)
+text(fit_final_o) 
+#snow on ground is no longer a determinant on the regression tree.  Numbers really
+#drop off under a high temp of 9.55 degrees
+
+knn_final_o <- train(count ~ day_of_year + MaxTemp + SnowonGrndcm + MeanTemp +MinTemp + TotalRainmm + TotalSnowcm + TotalPrecipmm, method="knn",
+                    data = train_o, na.action = na.omit,
+                    tuneGrid = data.frame(k = seq(1, 50, 2)), #best tune from all feature model
+                    trControl = control)
+knn_res_o <- predict(knn_final_o, newdata=test_o, type = "raw")
+RMSE(knn_res_o, test_o$count) 
+
+#higher RMSE, however results are similar in that the RMSE is equal to about about 1/2 
+#standard deviation.
+
+#this suggests that while the overall approach for forecasting rides based on the weather
+#could still be used, each counter has slight different factors that impact the number of rides.
 
 #ways to further improve the performance would be to find some way to model the effects
 #of holidays or other significant annual festivals and events would have on traffic.
 
+#also, a more complex model using previous year data as a baseline but would adjust 
+#for 
