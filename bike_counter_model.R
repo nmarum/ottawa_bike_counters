@@ -138,13 +138,13 @@ RMSE(knn_res2, test$count)
 #less than five rides.
 
 #Rtree does not have the same predictive power as KNN but its performance is better
-#than a lot of other algorithms and has very attractive interpretability.  You
-#can easily imagine from a City of Ottawa perspective, being able to give staff
-#a quick heuristic to indicate how many riders to expect on a given day using the
+#than a lot of other algorithms and has very attractive interpretability.  From a 
+#City of Ottawa operations and planning perspective, being able to provide staff
+#a simple heuristic to estimate how many riders one can expect on a given day using the
 #regression tree model would be very attractive and its performance is not that far 
-#off more sophisticated methods like KNN.
+#off (+/-10%) from more sophisticated algorithms.
 
-#this model is based on one bike counter.  However we can see how well it applies on
+#This model is based on one pathway bike counter.  However we can see how well it applies on
 #another winter bike counter in the Ottawa area for fun!
 
 #The Ottawa river bike counter had the second most number of entries.
@@ -157,24 +157,22 @@ tibble(statistic, summary(ORPY$count), summary(coby$count))
 #skewed with a greater distance between the mean and median.
 
 tibble(sd(ORPY$count), sd(coby$count))
-#The Ottawa river pathway also has a higher standard deviation, suggesting greater variablity.
-
+#The Ottawa river pathway also has a higher standard deviation, suggesting greater variability.
 
 set.seed(20201021, sample.kind = "Rounding")
-ind <- createDataPartition(ORPY$count, p=.9, list = FALSE)
+ind <- createDataPartition(ORPY$count, p=.9, list = FALSE)#Partitioning ORPY ride data
 
 train_o <- ORPY[ind,]
 test_o <- ORPY[-ind,]
 
-fit_final_o <- rpart(count ~ MaxTemp + day_of_year + SnowonGrndcm, data = train_o)
+fit_final_o <- rpart(count ~ MaxTemp + day_of_year + SnowonGrndcm, data = train_o)#fitting ORPY regression tree
 
 rtree_res_o <- predict(fit_final_o, newdata = test_o, type = "vector")
-RMSE(rtree_res_o, test_o$count) #RMSE of 618 - higher RMSE than the COBY,
+RMSE(rtree_res_o, test_o$count) #RMSE of 618 - about 200 higher RMSE than the COBY,
 
 plot(fit_final_o, compress = TRUE, margin = .1)
 text(fit_final_o) 
-#snow on ground is no longer a determinant on the regression tree.  Numbers really
-#drop off under a high temp of 9.55 degrees
+#snow on ground is no longer a determinant on the regression tree.  
 
 knn_final_o <- train(count ~ day_of_year + MaxTemp + SnowonGrndcm + MeanTemp +MinTemp + TotalRainmm + TotalSnowcm + TotalPrecipmm, method="knn",
                     data = train_o, na.action = na.omit,
@@ -183,8 +181,8 @@ knn_final_o <- train(count ~ day_of_year + MaxTemp + SnowonGrndcm + MeanTemp +Mi
 knn_res_o <- predict(knn_final_o, newdata=test_o, type = "raw")
 RMSE(knn_res_o, test_o$count) 
 
-#higher RMSE, however results are similar in that the RMSE is equal to about about 1/2 
-#standard deviation.
+#Result is higher RMSE under KNN than COBY, however results are similar in that the RMSE is equal 
+#to about about 1/2 a standard deviation.
 
 #this suggests that while the overall approach for forecasting rides based on the weather
 #could still be used, each counter has slight different factors that impact the number of rides.
@@ -193,4 +191,5 @@ RMSE(knn_res_o, test_o$count)
 #of holidays or other significant annual festivals and events would have on traffic.
 
 #also, a more complex model using previous year data as a baseline but would adjust 
-#for 
+#for new urban developments that feed traffic to pathways, adjustments to public transit, etc., 
+#would likely provide improved accuracy - but is well beyond my capacity to do at this time.
