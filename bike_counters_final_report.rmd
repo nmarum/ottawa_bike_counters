@@ -307,15 +307,14 @@ The k nearest neighbours approach using primary predictors provides for the best
 
 We will take a closer look to see if we can optimize the results of the regression tree and KNN approaches on the data by looking at more features.
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 knn_all_cv <- train(count ~ day_of_year + MaxTemp + SnowonGrndcm + MeanTemp +MinTemp + TotalRainmm + TotalSnowcm + TotalPrecipmm, method = "knn", 
                     data = train, na.action = na.omit, #omit NAs
                     tuneGrid = data.frame(k = seq(1, 50, 2)),
                     trControl = control)
 knn_all_cv$bestTune  
 #K of 33 and RMSE of about 392 - not much of an improvement with precip predictors
-ggplot(knn_all_cv, highlight = TRUE,) 
-+ggtitle("KNN with all predictors")
+ggplot(knn_all_cv, highlight = TRUE,) + ggtitle("KNN with all predictors")
 
 ```
 Using KNN, we can see there is an improvement using all the features as predictors however it is not a terribly significant one.
@@ -355,7 +354,7 @@ data.frame(dayofyear, row.names = "Cor with MeanTemp")
 ```
 There is a relatively low correlation with day or year and mean temperature: .369.   While weaker in terms of predictive power, the day of year can make a algorithm more robust as it is not highly correlated with temperature overall.  Particularly this provide an advantage to the distance based KNN method.
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 knn_meantemp <-  train(count ~ day_of_year + MeanTemp + SnowonGrndcm, method = "knn", 
                        data = train, na.action = na.omit, #omit NAs
                        tuneGrid = data.frame(k = seq(1, 50, 2)),
