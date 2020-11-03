@@ -57,7 +57,16 @@ Since kaggle requires an account and login to access the data, I have shared the
 The reason why I selected this particular dataset for this project is that I live in Ottawa, Ontario Canada and am a regular bike rider, who commutes to and from work about 8 months of the year.  There is an extensive network of pathways in Ottawa, with several bike counters that are prominently placed.  It appealed to me to use a data set to make predictions about something I am very familiar with.
 
 *EXPLORATORY ANALYSIS*
+
 ```{r}
+summary(dat)
+
+```
+A quick summary of our wrangled data set shows that there are a total of 14 columns reflecting 28,776 total entries.  The "location_id" and "location_name" are obviously identifiers of bike ride counter locations.  Our dependent variable is "count" which is the number of two-way rides past a bike counter recorded on a daily basis.  The "day" reflects a unique identifier per day from the first entry in January 2010 until the last entry on Dec 31, 2018; "day_of_week" identifies the day of the week by a numeric identifier starting with Sunday as 0 and Saturday as 6, and "day_of_year" being a count from 0 to 365 of each day in the calendar year (including an extra day for leap years).  I added a "date" field using the lubridate package during data wrangling to be able to more clearly associate an entry with a day of the year.  Finally, there are a series of weather observations that have been married with the bike counter ride entries which include: "MaxTemp" for maximum daily temperature, "Totalprecipmm" for total precipitation recorded that day in millimetres, among others. 
+
+
+
+```{r message=FALSE, warning=FALSE}
 dat %>%
   group_by(location_name) %>%
   summarize(mean_count = mean(count),
@@ -66,7 +75,7 @@ dat %>%
   arrange(desc(entries))  
 
 ```
-Examining the bike counter data, I can see that some counters have more entries than others.  While some counters seem to cease operations thorugh the winter months, a number of counters which are identified as "winter" counters operate year round.  This sounds like a more intresting set of counters to make predictions with based upon weather data.  I am also hoping that having more entires will improve the accuracy of such ratings. 
+Examining the bike counter ride count data, I can see that some counters have more entries than others.  While some counters seem to cease operations through the winter months, a number of counters which are identified as "winter" counters operate year round.  This sounds like a more interesting set of counters to make predictions with based upon weather data.  I am also hoping that having more entries will improve the accuracy of such ratings. 
 
 Shows the bike counter along Colonel By Drive near the Corktown footbridge (COBY) as the counter with the most overall entries/fewest missing entries.  COBY also has a relatively low proportion of "0" count/no bike entries (1.7%).  While not the busiest counter, the consistent entries seem promising from a predictive perspective.
 
@@ -84,7 +93,7 @@ dat %>% filter(location_name == c("COBY", "LMET", "LLYN", "LBAY", "SOMO", "ADAWE
   ggplot(aes(count, col=location_name)) + geom_density() 
 
 ```
-  Selecting for "winter" counters (i.e., counters that operate year round even when there is snow on the ground.), and using a density plot to see the frequency of bike ride counts per entry (i.e., day) not all counters follow the same distribution.  There seems to be one cluster of counters follow a similar distribution with a wide distribution of count entries, while a couple of other entries have a high number of days with relatively few riders and relatively few busy days.  We can see that COBY follows the distribution of most of the winter counters.
+Selecting for "winter" counters (i.e., counters that operate year round even when there is snow on the ground.), and using a density plot to see the frequency of bike ride counts per entry (i.e., day) not all counters follow the same distribution.  There seems to be one cluster of counters follow a similar distribution with a wide distribution of count entries, while a couple of other entries have a high number of days with relatively few riders and relatively few busy days.  We can see that COBY follows the distribution of most of the winter counters.
 
 ```{r}
 coby_rides <- c(median(coby$count), mean(coby$count))
@@ -98,51 +107,51 @@ Looking at the mean and median of the COBY counter and all of the City of Ottawa
 ```{r}
 tibble(sd(coby$count), sd(dat$count))
 ```
-Looking at standard deviation, we can see it is similar as well at 814 rides.  That being said, it appears that ride counts overall between different counters can vary widely over time.
+Looking at standard deviation, we can see it is similar as well at 814 rides. This would suggest that a predictive model created by COBY data should have applicability to other winter counters. That being said, overall it appears that ride counts overall between different counters can vary widely, which could be a challenge to predict.
 
-This would suggest that a predictive model created by coby data should have applicability to other winter counters
+We will start to look to identify what kind of patterns may exist in the COBY bike counter over time.
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 coby %>% group_by(day_of_week) %>%
   summarize(avg_count = mean(count)) %>%
   ggplot(aes(day_of_week, avg_count)) + geom_col() + 
   ggtitle("Col By Counter - Average Count of Rides by Day of Week")
 ```
-#consistently busy through the week - a little busier on weekdays
+Looking at the average number of rides by the day of the week (with 0 meaning Sunday and 6 meaning Saturday), we can see a trend of Tuesday to Friday of of higher traffic - likely from commuters heading towards downtown Ottawa along the Colonel By drive pathway.  Traffic drops off a little, by about 20%, on the weekends and Mondays.
 
 ```{r}
 coby %>% mutate(year = year(date)) %>%
-  ggplot(aes(day_of_year, count, col=year)) +
+  ggplot(aes(day_of_year, count)) +
   geom_point(alpha=.5) +
+  geom_smooth(method = "loess") +
   ggtitle("Col By Counter - Rides by Day of the Year (2010-2018)")
 ```
-#clear trend over course of the year.  First 100 days (3 or so months) of year are
-#dead of winter for Ottawa - not much riding.  Peaks in summer months and then drops
-#back off in the fall.  Appears relatively consistent year over year.
+Looking at the ride count data by day of the year with 0 being New Year's Day running to 364 as New Year's Eve of the same year, shows a clear trend in terms of the number of rides per day over course of the year.  The first 100 days (3 or so months - January to early April) of year are the dead of winter in Ottawa - not many bike rides are recorded before the 80 to 90 day mark with the start of Spring.  From there, bike rides per day rise and peak around June and the summer months and then starts to gradually drop off in the fall and returns to winter levels of bike rides for the month of December.  This trends appears relatively consistent year over year and we can see the pattern by fitting a locally weighted bin-smoothing line.
 
+Obviously, the weather in the summer months in Ottawa is very different from the weather in the winter, so this pattern is not surprising.
 ```{r}
 coby %>% mutate(year = year(date), month = month(date)) %>%
   ggplot(aes(day_of_year, count, col=MaxTemp)) +
   geom_point(alpha=.5) +
+  geom_smooth(method = "loess") +
   ggtitle("Col By Counter - Rides by Day of the Year and Max Temp")
 
 ```
-#Higher temps align with summer months - and more rides
+When we take the same graph, but colour each dot to represent the maximum temperature on the day in question, we can see that the higher temperature counts (ones with a lighter blue dot) are generally found int he summer months and appears associated with more rides.  There is however a great deal of variability, some relatively warmer days did not have a very high number of rides recorded that day while there are some colder days in the summer months which did.  This may be due to precipitation levels or other factors not seen in this graph.
 
 ```{r}
 coby %>% mutate(year = year(date), month = month(date)) %>%
   ggplot(aes(day_of_year, count, col=TotalPrecipmm)) +
   geom_point(alpha=.5) +
+  geom_smooth(method = "loess")+
   ggtitle("Col By - Rides by Day of the Year and Total Precipmm")
 
 ```
-#Notice that there are a few days of high precipitation appear to be less busy.
+Looking once again at the same graph, but this time overlaying precipitation levels, we see that there are a few days of high precipitation appear to be less busy.  However, there are also a few days with high levels of precipitation (light blue dot) that had a higher than normal (i.e., above the locally weighted bin-smoothing trend line), however a clear pattern is not easily discernible.  
 
+Since it is hard to identify with confidence a clear pattern with respect to precipitation and its impact on bike rides, I decided to stratify data by precipitation amounts to have a closer look.
 
-#Seems like there are fewer rides when there is rain - 
-#I decided to stratify data by precip to have  better look using facet view  
-
-```{r}
+```{r message=FALSE, warning=FALSE}
 #creating a factor with levels
 precip_levels <- coby %>% 
   mutate(Precipmm_levels = factor(round(TotalPrecipmm/10, digits=0)))
@@ -159,15 +168,8 @@ precip_levels %>% mutate(year = year(date), month = month(date)) %>%
   facet_wrap(facets = Precipmm_levels~.) +
   ggtitle("Col By - Rides by Day of the Year Stratified by TotalPrecipmm")
 ```
-Stratifying by Totalprecipmm and overlaying a bin smoothing line using local weighted regression
-We see that only at very high precip levels there seems to be an effect on Rides.
-the apparent visual difference between the low/no precip days and high precip days
-may simply be due to random variation.
-Day of the year seems to be a stronger indicator - the summer months have more rides
-even in the rain than during the Ottawa winter months (Dec-March)
+By stratifying the ride entries by the "Totalprecipmm" variable and overlaying a bin smoothing line using local weighted regression, we see that only at very high precipitation levels there seems to be an effect on the number of rides per day.  The apparent visual difference between the low/no precipitation days and high precipitation days may simply be due to random variation.  Day of the year or temperature seem to be  stronger indicators - with the warm summer months have more rides even in the rain than during the Ottawa winter months (Dec-March)
 
-Since precipitation does not appear significant predictor and we have seen temp,
-lets look at snow on the ground
 ```{r}
 coby %>% mutate(year = year(date), month = month(date)) %>%
   filter(SnowonGrndcm > 0) %>%
@@ -175,10 +177,9 @@ coby %>% mutate(year = year(date), month = month(date)) %>%
   geom_point(alpha=.5) +
   ggtitle("Col By Counter - Rides with Snow on Ground > 0cm")
 ```
-clear trend that any recorded snow on the ground reduces the number of rides 
-significantly.
+Comparing the amount of recorded snow on the ground and the number of rides shows a clear trend that any recorded snow on the ground reduces the number of rides 
+significantly, though there are still a handful of hardy Ottawa bike riders that ride their bikes year round along the Colonel By Drive pathway.
 
-lets take a look at rides by temp
 
 ```{r}
 temp_levels <- coby %>% 
@@ -195,7 +196,7 @@ temp_levels %>% mutate(year = year(date), month = month(date)) %>%
   ggtitle("Col By Bike Counter - Count of rides by Max Temp")
 
 ```
-Looking at rides by max daily temperature shows a smooth relationship between an increase in temperature and more rides however the effect seems to tail off at higher temperatures - presumably too hot  for some riders.
+Taking a closer look at max daily temperature's impact on rides, we see a smooth relationship between an increase in temperature and more rides however the effect seems to tail off at higher temperatures - presumably too hot for some riders.
 
 ```{r}
 
@@ -207,10 +208,9 @@ temp_levels %>% mutate(year = year(date), month = month(date)) %>%
   facet_wrap(facets = maxtemp_levels~.) +
   ggtitle("Col By - Rides by Day of the Year Stratified by Max Temp")
 ```
-Visualizing ride counts over the course of the year stratified by temp we can see that warmer days are clustered in summer months and have more rides days in the same broad temperature range have wide variability
+Visualizing ride counts over the course of the year stratified by max temperature we can see that warmer days are clustered in summer months and have more rides.  However, days in the same broad temperature range still show wide variability.
 
 ```{r}
-
 #running a series of pairwise correlations by various predictors
 day_of_year <- cor(coby$count, coby$day_of_year, use = "pairwise.complete.obs", method = "spearman")
 day_of_week <- cor(coby$count, coby$day_of_week, use="pairwise.complete.obs", method = "spearman")
@@ -226,19 +226,20 @@ Snow_on_Grd <- cor(coby$SnowonGrndcm, coby$count, use = "pairwise.complete.obs",
 data.frame(day_of_year, day_of_week, Max_Temp, Mean_Temp, Min_Temp, Total_Precipmm, Total_Rainmm, Total_Snowcm, Snow_on_Grd, row.names = "Spear Cor with Rides")
 
 ```
-The Spearman correlation was used in order to help control for outliers by computing correlation based on the ranks of values, of which there seem to be many in the data.
+while visualizing the data shows that day of the year is a strong predictor looking at pairwise correlations of the various features against rides suggests that using temperature, max temp in particular, and snow on the ground are most closely associated with rides.  The Spearman correlation  in order to help control for outliers by computing correlation based on the ranks of values, of which there seem to be many in the data.
 
-while visualizing the data shows that day of the year is a strong predictor looking at correlations of the various features against rides suggests that using temperature, max temp in particular, and snow on the ground are most closely associated with rides.
+Higher temps are strongly correlated with more rides (.87), while increased snow on the ground is negatively correlated with rides (-.76).  Precipitation, rain or snow, seems less of a predictor.  Day of the year is not strongly correlated with rides but the relationship we saw in the visualization was not linear, but very intuitive.
 
-Higher temps are strongly correlated with more rides, while increased snow on the ground is negatively correlated with rides.  Precipitation, rain or snow, seems less of a predictor.
+While the causation is not clear (i.e., Is it higher temperature or the fact it is the summer months that drive additional ridership along the pathway?) the pattern with respect to rides is.
 
-While causation is not clear (is it higher temperature or the fact it is the summer months that drive additional ridership on the Col By pathway?) the pattern is clear.
-
-As I move to make ML model I will focus on using Max Temp, Snow on Ground and Day of year as key features to predict number of rides.
+Using the insights gained from this exploratory analysis, we will make a Machine Learning model that will focus on using Temperature, Snow on Ground and Day of year as key features to predict number of rides.
 
 *MACHINE LEARNING MODEL BUILDING*
 
-```{r}
+For this ML model building exercise, I used the functionality provided in the caret package to leverage a number of different machine learning algorithms.  The first step in the ML model building is to partition the COBY dataset into training and test sets.  Then I established a training control protocol using 10-fold cross-validation and establishing training grids for tuning for those algorithms that included tuning parameters.  The machine learning algorithms I examined included, K Nearest Neighbours (KNN), randomForest (rf), a Naive Bayesian linear algorithm (bayes_glm), linear regression (lm), and two regression tree algorithms (rpart and rpart2).  For the first round of trials, I used three features: "MaxTemp", "day_of_year", and "SnowonGrndcm."
+
+
+```{r warning=FALSE}
 #select for COBY data and remove some na entries to avoid errors for some algorithms
 coby <- dat %>% filter(location_name == "COBY", !is.na(SnowonGrndcm))
 
@@ -249,20 +250,11 @@ ind <- createDataPartition(coby$count, p=.9, list = FALSE)
 
 train <- coby[ind,]
 test <- coby[-ind,]
-
-#using K nearest neighbours with the three key predictors.  Intuitively, this seemed the best
-#model due to the very different relationships that the key features seem to have on rides.
-control <- trainControl(method = "cv", number = 10, p = .9)
-knn_cv <- train(count ~ day_of_year + MaxTemp + SnowonGrndcm, method = "knn", 
-                data = train, na.action = na.omit, #omit NAs
-                tuneGrid = data.frame(k = seq(1, 50, 2)),
-                trControl = control)
-ggplot(knn_cv, highlight = TRUE)#graph of turning based on lowest RMSE for continuous data
-knn_cv$bestTune #K of 25 and RMSE of about 400
+control <- trainControl(method = "cv", number = 10, p = .9) #establish train control
 
 rf_cv <- train(count ~ MaxTemp + day_of_year + SnowonGrndcm, method = "rf", #randomForest algorithm
                data = train, na.action = na.omit, #omit NAs
-               tuneGrid = data.frame(mtry = seq(1:3)),
+               tuneGrid = data.frame(mtry = seq(1:2)),
                trControl = control)
 ggplot(rf_cv, highlight = TRUE)
 rf_cv$bestTune #mtry of 1  #best is about RMSE of 415
@@ -283,118 +275,142 @@ rpart2_cv <- train(count ~ MaxTemp + day_of_year + SnowonGrndcm, method = "rpart
                    trControl = control)
 
 ggplot(rpart2_cv, highlight = TRUE)
-rpart2_cv$results #best tune is Max depth of 4 and RMSE of 439
+rpart2_cv$results #best tune is Max depth of 4 and RMSE of 436
 
+knn_cv <- train(count ~ day_of_year + MaxTemp + SnowonGrndcm, method = "knn", 
+                data = train, na.action = na.omit, #omit NAs
+                tuneGrid = data.frame(k = seq(1, 50, 2)),
+                trControl = control)
+knn_cv$bestTune #K of 29 and RMSE of about 400
+ggplot(knn_cv, highlight = TRUE) +
+  ggtitle("KNN with day_of_year, MaxTemp and SnowonGrndcm predictors")
+#graph of turning based on lowest RMSE for continuous data
+
+
+```
+
+Intuitively, KNN seemed to be the the best model due to the very different relationships that the three features seem to have on rides this proved to be the case in my first analysis.  KNN provided the best results with a root mean square error (RMSE) of just under 400 with a k of 25 nearest neighbours.  randomForest performed well with an RMSE of 415, but was very computationally intensive.  The regression tree performed well with rpart2 provide an RMSE of 439, while the linear models (lm and bayes_glm) performed the worst at an RMSE of 470 each.
+
+While KNN was the best performing algorithm in terms of predictive power on the training data, the regression tree approach did provide very attractive interpretability and insight into the relationships between the variables in the data.
+
+```{r message=FALSE, warning=FALSE}
 #visualizing a regression tree for this.
 fit <- rpart(count ~ MaxTemp + day_of_year + SnowonGrndcm, data = coby)
 
-plot(fit, compress = TRUE, margin = .1)
+plot(fit, compress = TRUE, margin = .1) 
 text(fit)
-#Easily interpretable but day of year is not used.  Given clear pattern from day of 
-#year we see in the data, this impacts the effectiveness of the regression tree.
 
-#using k nearest neighbours using primary predictors provides for the best results.
-#probably because it is better able to handle the non linear relationship from day of year
-#it is also logical that regardless of temperature or weather, someone may be more 
-#or less inclined to keep their bike out and go for a ride during fairer seasons
-#as opposed to when their bike is put away for long periods of time (i.e., winter).
+```
+As we can see from the above visualization of a regression tree for the COBY data using the three predictors, we can see the results are easily interpretable based upon temperature and snow on the ground, but that day of year is not used.  Given clear pattern from day of year we see in the data, this would seem to impact the effectiveness of the regression tree as a predictor.
 
-#lets try with all weather predictors
+The k nearest neighbours approach using primary predictors provides for the best results likely because it is better able to handle the non linear relationship it has with ridership.  We can easily imagine that regardless of temperature or weather, someone may be more inclined to keep their bike out and go for a ride during the warmer seasons, even on a relatively cold or rainy day, as opposed to when their bike is put away for long periods of time (i.e., winter) and there is a stretch of fair weather.
+
+We will take a closer look to see if we can optimize the results of the regression tree and KNN approaches on the data by looking at more features.
+
+```{r}
 knn_all_cv <- train(count ~ day_of_year + MaxTemp + SnowonGrndcm + MeanTemp +MinTemp + TotalRainmm + TotalSnowcm + TotalPrecipmm, method = "knn", 
                     data = train, na.action = na.omit, #omit NAs
                     tuneGrid = data.frame(k = seq(1, 50, 2)),
                     trControl = control)
-ggplot(knn_all_cv, highlight = TRUE)
-knn_all_cv$bestTune #K of 33 and RMSE of about 392 - not much of an improvement with precip 
-#predictors
+knn_all_cv$bestTune  
+#K of 33 and RMSE of about 392 - not much of an improvement with precip predictors
+ggplot(knn_all_cv, highlight = TRUE,) 
++ggtitle("KNN with all predictors")
 
+```
+Using KNN, we can see there is an improvement using all the features as predictors however it is not a terribly significant one.
+
+
+```{r}
 #lets do the same with rtree - all predictors
 
 fit_all <- rpart(count ~ day_of_year + MaxTemp + SnowonGrndcm + MeanTemp +MinTemp + TotalRainmm + TotalSnowcm + TotalPrecipmm, data = coby)
 
 plot(fit_all, compress = TRUE, margin = .1)
 text(fit_all)
-#similar results to the top 3 predictors, but uses mean temp rather than max temp.
 
+```
+Looking at a regression tree using all predictors, we can see the results are similar to the previous tree, however there is an extra branch added at lower temperatures and we can see that the algorithm is using mean temperature rather than maximum temperature.
+
+
+```{r}
 variables <- varImp(fit_all)
 variables %>% arrange(desc(Overall))
-#The rpart has the advantage of being able to provide the importance of variables 
-#within the model using a simple function, varImp().  We can see that the
-#mean and max temp features are top predictors followed by snow on ground.
-#day_of_year is a predictor as well but less important than the temp predictors.
+```
 
-cor(train$MeanTemp, train$MaxTemp, use = "pairwise.complete.obs")
-cor(train$MeanTemp, train$MinTemp, use = "pairwise.complete.obs")
-#If we look at correlations, we naturally the temps are highly correlated.  
-#Since regression tree suggested MeanTemp is the best predictor we will swap that
-#in for  the regression tree and examine it for the KNN approach.
+The rpart regression tree has the advantage of being able to provide the importance of variables within the model using a simple function, varImp().  Using this function we see that the mean and max temp features are top predictors followed by snow on ground.  day_of_year is a predictor as well but less important than the temperature predictors.
 
-cor(train$day_of_year, train$MeanTemp, use = "pairwise.complete.obs")
-#There is a relatively low correlation with day or year and mean temperature: .369.  
-#While weaker in terms of predictive power, the day of year can make a algorithm 
-#more robust as it is not highly correlated with temperature overall.  Particularly 
-#this provide an advantage to the distance based KNN method.
+```{r}
+min <- cor(train$MeanTemp, train$MaxTemp, use = "pairwise.complete.obs")
+max <-cor(train$MeanTemp, train$MinTemp, use = "pairwise.complete.obs")
 
+data.frame(min, max, row.names = "Cor with MeanTemp")
+```
+If we look at correlations between min and max temperature and mean temperature, we naturally the temps are highly correlated.  Since regression tree suggested MeanTemp is the best predictor we will swap that in for the regression tree and examine it for the KNN approach.
+
+```{r}
+dayofyear <- cor(train$day_of_year, train$MeanTemp, use = "pairwise.complete.obs")
+data.frame(dayofyear, row.names = "Cor with MeanTemp")
+
+```
+There is a relatively low correlation with day or year and mean temperature: .369.   While weaker in terms of predictive power, the day of year can make a algorithm more robust as it is not highly correlated with temperature overall.  Particularly this provide an advantage to the distance based KNN method.
+
+```{r}
 knn_meantemp <-  train(count ~ day_of_year + MeanTemp + SnowonGrndcm, method = "knn", 
                        data = train, na.action = na.omit, #omit NAs
                        tuneGrid = data.frame(k = seq(1, 50, 2)),
                        trControl = control)
-ggplot(knn_meantemp, highlight = TRUE)
 knn_meantemp$bestTune 
-#Will close, Maxtemp performs slightly better using KNN than mean temp.
-
-#we will use KNN and the Rtree on the test set to get a sense of the algorithms true 
-#accuracy.
+ggplot(knn_meantemp, highlight = TRUE) +ggtitle("KNN with MeanTemp")
+```
+While close, Maxtemp performs better than MeanTemp using KNN.  We will use KNN and the rpart on the test set to get a sense of the algorithms true accuracy.
 
 
 #FINAL MODELS AND RESULTS
-
+```{r}
 fit_final <- rpart(count ~ MaxTemp + day_of_year + SnowonGrndcm, data = coby)
 
 rtree_res <- predict(fit_final, newdata = test, type = "vector")
-RMSE(rtree_res, test$count)
+rtree <- RMSE(rtree_res, test$count)
 
 knn_final <- train(count ~ day_of_year + MaxTemp + SnowonGrndcm, method="knn",
-                   tune.grid = data.frame(k=25), #best tune from original maxtemp model
+                   tune.grid = data.frame(k=25),
                    data = train, na.action = na.omit)
 knn_res <- predict(knn_final, newdata=test, type = "raw")
-RMSE(knn_res, test$count) #max temp performs better in Knn than mean temp
+knn_3feat <- RMSE(knn_res, test$count) 
 
 knn_final2 <- train(count ~ day_of_year + MaxTemp + SnowonGrndcm + MeanTemp +MinTemp + TotalRainmm + TotalSnowcm + TotalPrecipmm, method="knn",
-                    tune.grid = data.frame(k=33), #best tune from all feature model
+                    tune.grid = data.frame(k=33), 
                     data = train, na.action = na.omit)
 knn_res2 <- predict(knn_final2, newdata=test, type = "raw")
-RMSE(knn_res2, test$count)  
-#the all feature model does perform better than the 3 feature KNN model but by
-#less than five rides.  
+knn_allfeat <- RMSE(knn_res2, test$count)  
 
-##COBY RESULTS
-#The best performing model, KNN with all features, has an RMSE of 397.98.
-#Rtree does not have the same predictive power as KNN but its performance is better
-#than a lot of other algorithms (bayesglm, rf, and lm) and has very attractive 
-#interpretability.  From a City of Ottawa operations and planning perspective, 
-#being able to provide staff a simple heuristic to estimate how many riders one 
-#can expect on a given day using the regression tree model would be very 
-#attractive and its performance is not that far off (+/-10%) from more 
-#sophisticated algorithms.
+data.frame(rtree, knn_3feat, knn_allfeat, row.names = "RMSE")
+```
 
-#This model is based on one pathway bike counter.  However we can see how well it applies on
-#another winter bike counter in the Ottawa area for fun!
+_COBY RESULTS_
+The best performing model, KNN with all features, has an RMSE of 397.98.  The regression tree does not have the same predictive power as KNN but its performance is better than a lot of other algorithms (bayesglm, rf, and lm) and has very attractive interpretability.  From a City of Ottawa operations and planning perspective, being able to provide staff a simple heuristic to estimate how many riders one can expect on a given day using the regression tree model would be very attractive and its performance is not that far off (+/-10%) from more sophisticated algorithms.
 
-##APPLYING MODEL TO ANOTHER BIKE RIDE COUNTER
+This model is based on one pathway bike counter.  However we can see how well it applies on another winter bike counter in the Ottawa area for fun!
 
-#The Ottawa River pathway bike counter had the second most number of entries.
+_APPLYING MODEL TO ANOTHER BIKE RIDE COUNTER_
+
+The Ottawa River pathway bike counter had the second most number of entries.
+
+```{r}
 
 ORPY <- dat %>% filter(location_name == "ORPY", !is.na(SnowonGrndcm), !is.na(TotalSnowcm))
 statistic <- c("min", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max.")
 tibble(statistic, summary(ORPY$count), summary(coby$count))
-#We can see that on average the Ottawa River pathway has more riders, with higher median,
-#mean and max number of rides than the Col By pathway.  However rides appear more
-#skewed with a greater distance between the mean and median.
+```
+We can see that on average the Ottawa River pathway has more riders, with higher median, mean and max number of rides than the Col By pathway.  However rides appear more skewed with a greater distance between the mean and median.
 
+```{r}
 tibble(sd(ORPY$count), sd(coby$count))
-#The Ottawa river pathway also has a higher standard deviation, suggesting greater variability.
+```
+The Ottawa river pathway also has a higher standard deviation, suggesting greater variability.
 
+```{r}
 set.seed(20201021, sample.kind = "Rounding")
 ind <- createDataPartition(ORPY$count, p=.9, list = FALSE)#Partitioning ORPY ride data
 
@@ -404,47 +420,32 @@ test_o <- ORPY[-ind,]
 fit_final_o <- rpart(count ~ MaxTemp + day_of_year + SnowonGrndcm, data = train_o)#fitting ORPY regression tree
 
 rtree_res_o <- predict(fit_final_o, newdata = test_o, type = "vector")
-RMSE(rtree_res_o, test_o$count) #RMSE of 618 - about 200 higher RMSE than the COBY,
-
-plot(fit_final_o, compress = TRUE, margin = .1)
-text(fit_final_o) 
-#snow on ground is no longer a determinant on the regression tree.  
+rtree_o <- RMSE(rtree_res_o, test_o$count) #RMSE of 618 - about 200 higher RMSE than the COBY,
 
 knn_final_o <- train(count ~ day_of_year + MaxTemp + SnowonGrndcm + MeanTemp +MinTemp + TotalRainmm + TotalSnowcm + TotalPrecipmm, method="knn",
                      data = train_o, na.action = na.omit,
                      tuneGrid = data.frame(k = seq(1, 50, 2)), #best tune from all feature model
                      trControl = control)
 knn_res_o <- predict(knn_final_o, newdata=test_o, type = "raw")
-RMSE(knn_res_o, test_o$count) 
+knn_o <- RMSE(knn_res_o, test_o$count) 
 
-#Result is higher RMSE under KNN than COBY, however results are similar in that the RMSE is equal 
-#to about about 1/2 a standard deviation.
-
-##CONCLUSION
-
-#The results of applying the model approach to another counter suggests that while
-#the overall approach for forecasting rides based on the weather could still be 
-#used across other counters, each counter has slight different factors that 
-#impact the number of rides.  Therefore some tuning and selection of optimized parameters
-#would be required for each.  It is not one size fits all.
-
-#Potential ways to further improve the performance would be to find some way to model the effects
-#of holidays or other significant annual festivals and events would have on traffic.
-
-#Also, a more complex model using previous year data as a baseline but would adjust 
-#for new urban developments that feed traffic to pathways, adjustments to public transit, etc., 
-#would likely provide improved accuracy - but is well beyond my capacity to do at this time.
-
-```{r cars}
-summary(cars)
+data.frame(rtree_o, knn_o, row.names = "RMSE")
 ```
+Result is higher RMSE under KNN than COBY, however results are similar in that the RMSE is equal to about about 1/2 a standard deviation.  KNN remains the superior algorithm, however the regression tree is relatively close.
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+plot(fit_final_o, compress = TRUE, margin = .1)
+text(fit_final_o) 
+#snow on ground is no longer a determinant on the regression tree.  
 ```
+Plotting the regression tree for the Ottawa River pathway we can see that snow on the ground is no longer a determinant on the tree.  Maximimum temperature is the only predictor.
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+*CONCLUSION*
+
+The results of applying the model approach to another counter suggests that while the overall approach for forecasting rides based on the weather could still be used across other counters, each counter has slight different factors that impact the number of rides.  Therefore some tuning and selection of optimized parameters would be required for each.  It is not one size fits all.
+
+Potential ways to further improve the performance would be to find some way to model the effects of holidays or other significant annual festivals and events would have on traffic.
+
+Also, a more complex model using previous year data as a baseline but would adjust for new urban developments that feed traffic to pathways, adjustments to public transit, etc., would likely provide improved accuracy - but is well beyond my capacity to do at this time.
+
