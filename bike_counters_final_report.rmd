@@ -48,13 +48,15 @@ rm("df", "df2")
 
 This report provides the  exploratory analysis and machine learning model building for a machine learning project for the HarvardX capstone project.  It is uses publicly available City of Ottawa bike ride counter data from public pathways in Ottawa, Ontario CANADA as well as publicly available weather data from Environment Canada.
 
-The data used in this project werefound in zip format on Kaggle at the following address: https://www.kaggle.com/m7homson/ottawa-bike-counters/download
+The data used in this project were found in zip format on Kaggle at the following address: https://www.kaggle.com/m7homson/ottawa-bike-counters/download
 To access it on Kaggle you have to create an account and login which 
 is a challenge to do in the R environment.  
 
 Since kaggle requires an account and login to access the data, I have shared the inforamtion on my github repo.  A copy of the final script, including data import and wrangling is included on my github repo: https://github.com/nmarum/ottawa_bike_counters
 
 The reason why I selected this particular dataset for this project is that I live in Ottawa, Ontario Canada and am a regular bike rider, who commutes to and from work about 8 months of the year.  There is an extensive network of pathways in Ottawa, with several bike counters that are prominently placed.  It appealed to me to use a data set to make predictions about something I am very familiar with.
+
+
 
 *EXPLORATORY ANALYSIS*
 
@@ -234,7 +236,9 @@ While the causation is not clear (i.e., Is it higher temperature or the fact it 
 
 Using the insights gained from this exploratory analysis, we will make a Machine Learning model that will focus on using Temperature, Snow on Ground and Day of year as key features to predict number of rides.
 
-*MACHINE LEARNING MODEL BUILDING*
+
+
+*MACHINE LEARNING MODEL*
 
 For this ML model building exercise, I used the functionality provided in the caret package to leverage a number of different machine learning algorithms.  The first step in the ML model building is to partition the COBY dataset into training and test sets.  Then I established a training control protocol using 10-fold cross-validation and establishing training grids for tuning for those algorithms that included tuning parameters.  The machine learning algorithms I examined included, K Nearest Neighbours (KNN), randomForest (rf), a Naive Bayesian linear algorithm (bayes_glm), linear regression (lm), and two regression tree algorithms (rpart and rpart2).  For the first round of trials, I used three features: "MaxTemp", "day_of_year", and "SnowonGrndcm."
 
@@ -365,7 +369,8 @@ ggplot(knn_meantemp, highlight = TRUE) +ggtitle("KNN with MeanTemp")
 While close, Maxtemp performs better than MeanTemp using KNN.  We will use KNN and the rpart on the test set to get a sense of the algorithms true accuracy.
 
 
-#FINAL MODELS AND RESULTS
+
+*FINAL MODELS AND RESULTS*
 ```{r}
 fit_final <- rpart(count ~ MaxTemp + day_of_year + SnowonGrndcm, data = coby)
 
@@ -437,7 +442,8 @@ plot(fit_final_o, compress = TRUE, margin = .1)
 text(fit_final_o) 
 #snow on ground is no longer a determinant on the regression tree.  
 ```
-Plotting the regression tree for the Ottawa River pathway we can see that snow on the ground is no longer a determinant on the tree.  Maximimum temperature is the only predictor.
+Plotting the regression tree for the Ottawa River pathway we can see that snow on the ground is no longer a determinant on the tree.  Maximum temperature is the only predictor.
+
 
 
 *CONCLUSION*
