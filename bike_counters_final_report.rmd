@@ -452,8 +452,6 @@ Applying the regression tree and KNN algorithms to ORPY results in a higher RMSE
 plot(fit_final_o, compress = TRUE, margin = .1)
 text(fit_final_o) 
 
-library(rpart.plot)
-rpart.plot(fit_final_o)
 #snow on ground is no longer a determinant on the regression tree.  
 ```
 

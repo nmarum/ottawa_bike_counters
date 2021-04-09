@@ -193,3 +193,4 @@ RMSE(knn_res_o, test_o$count)
 #also, a more complex model using previous year data as a baseline but would adjust 
 #for new urban developments that feed traffic to pathways, adjustments to public transit, etc., 
 #would likely provide improved accuracy - but is well beyond my capacity to do at this time.
+

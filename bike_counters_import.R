@@ -16,7 +16,7 @@ download.file(url1, destfile = "ml_friendly_bike_counters.csv")
 download.file(url2, destfile = "ottawa_bike_counters.csv")
 
 dat <- read_csv("ml_friendly_bike_counters.csv")
-alt <- read_csv("ottawa_bike_counters.csv")
+alt <- read_csv("ottawa_bike_counters.csv", col_types = "Ddddddddddddddddd")
 
 df <- as_tibble(unique(dat$day))
 df2 <- as_tibble(unique(as.Date(alt$Date)))
