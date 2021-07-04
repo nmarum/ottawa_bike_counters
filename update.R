@@ -180,6 +180,44 @@ varImp(rpart_revised)
 #major determinants of bike rides along Colonel By Drive.  This could be different at one at other counters.
 
 
-##Examing a Laurier Bike Lane counter - downtown core of Ottawa
+##Examing a Laurier Bike Lane counter at Metcalfe - downtown core of Ottawa
+
+lmet <- dat %>% filter(location_name == "LMET")
+lmet_2019 <- dat_2019 %>% filter(location_name =="LMET")
+
+lmet <- lmet %>% mutate(day_of_week = weekdays(date))
+
+lmet$day_of_week <- factor(lmet$day_of_week,
+                                   levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
+lmet_2019 <- lmet_2019 %>% mutate(day_of_week = weekdays(lmet_2019$date))
+
+lmet_2019$day_of_week <- factor(lmet_2019$day_of_week,
+                                        levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
+lmet_2019 <- lmet_2019 %>% filter(!is.na(count))
+
+rpart_lmet <- rpart(count ~ MaxTemp + day_of_year + SnowonGrndcm + day_of_week, data = lmet)
+
+preds_lmet <- predict(rpart_revised, newdata = lmet_2019, type = "vector")
+
+RMSE(preds_lmet, lmet_2019$count)
+
+plot(rpart_lmet, compress = TRUE, margin = .1)
+text(rpart_lmet, use.n = TRUE)
+varImp(rpart_lmet)
 
 
+knn_lmet <- train(count ~ day_of_year + day_of_week + MaxTemp + MeanTemp + MinTemp + TotalRainmm + TotalSnowcm, method="knn",
+                     tune.grid = data.frame(k=25), #best tune from original maxtemp model
+                     data = lmet, na.action = na.omit)
+
+
+
+preds2_lmet <- predict(knn_lmet, newdata = lmet_2019, type = "raw")
+
+RMSE(preds2_lmet, lmet_2019$count) #significantly better than rpart
+
+#From the regression tree and the variable importance function, we find day of the week is a 
+#more significant predictor.  However, it still trails behind day of the year, max temp and 
+#the presence of snow on the ground in terms of predicting

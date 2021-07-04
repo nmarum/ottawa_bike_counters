@@ -23,4 +23,6 @@ Added an update script which includes weather and bike counter data for 2019 to 
 The updated bike counter data can be found at the City of Ottawa open data portal:
 https://open.ottawa.ca/documents/ottawa::bicycle-trip-counters/about
 
+Data is in an MSExcel spreadsheet format.  A copy of the spreadsheet used for this analysis is uploaded to the repo.
+
 
