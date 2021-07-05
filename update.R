@@ -6,6 +6,7 @@ library(readxl) #for reading xlsx table with updated bike counter data
 library(lubridate) #for parsing of dates
 library(caret) #includes several ML algorithms, including KNN3.
 library(rpart) #provide a regression tree ML algorithm
+library(Rborist)
 
 
 #create object with updated Ottawa International Airport (station 49568) weather data for 2019
@@ -156,12 +157,12 @@ preds_revised <- predict(rpart_revised, newdata = coby_2019_revised, type = "vec
 
 RMSE(preds_revised[1:307], coby_2019_revised$count[1:307])   #no change...
 
-plot(rpart_revised)
+plot(rpart_revised, compress = TRUE, margin = .1)
 text(rpart_revised, use.n = TRUE)
 
 
 knn_revised <- train(count ~ day_of_year + day_of_week + MaxTemp + MeanTemp + MinTemp + TotalRainmm + TotalSnowcm, method="knn",
-                   tune.grid = data.frame(k=25), #best tune from original maxtemp model
+                   tuneGrid = data.frame(k=25), #best tune from original maxtemp model
                    data = coby_revised, na.action = na.omit)
 
 
@@ -208,11 +209,10 @@ text(rpart_lmet, use.n = TRUE)
 varImp(rpart_lmet)
 
 
-knn_lmet <- train(count ~ day_of_year + day_of_week + MaxTemp + MeanTemp + MinTemp + TotalRainmm + TotalSnowcm, method="knn",
-                     tune.grid = data.frame(k=25), #best tune from original maxtemp model
-                     data = lmet, na.action = na.omit)
-
-
+knn_lmet <- train(count ~ MaxTemp + day_of_year + day_of_week + TotalRainmm + TotalSnowcm, method="knn",
+                     tuneGrid = data.frame(k= 25), #best tune from original maxtemp model
+                     data = lmet, na.action = na.omit) #omitted "SnowonGrndcm" due to too many NAs.
+knn_lmet$results
 
 preds2_lmet <- predict(knn_lmet, newdata = lmet_2019, type = "raw")
 
@@ -221,3 +221,20 @@ RMSE(preds2_lmet, lmet_2019$count) #significantly better than rpart
 #From the regression tree and the variable importance function, we find day of the week is a 
 #more significant predictor.  However, it still trails behind day of the year, max temp and 
 #the presence of snow on the ground in terms of predicting
+
+lmet %>% qplot(day_of_year, count, data = ., color = day_of_week, geom = "point")
+
+coby_revised %>% qplot(day_of_year, count, data = ., color = day_of_week, geom = "point")
+
+
+
+#also tried a random forest model
+rf_lmet <- train(count ~ day_of_year + day_of_week + MaxTemp + TotalRainmm + TotalSnowcm, method="Rborist",
+                 tuneGrid = data.frame(predFixed = 2, minNode = 3), #identified as best tune
+                 data = lmet, na.action = na.omit)
+
+rf_lmet$results #model results are impressive...
+
+preds_rf <- predict(rf_lmet, newdata = lmet_2019)
+RMSE(preds_rf, lmet_2019$count) #however the predictions on 2019 data is comparable to other models.
+varImp(rf_lmet) 
