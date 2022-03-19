@@ -3,8 +3,8 @@ title: "Ottawa Bike Counter Machine Learning Project"
 author: "Nick Marum"
 date: "28/10/2020"
 output:
-  word_document: default
   pdf_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}

@@ -222,9 +222,9 @@ RMSE(preds2_lmet, lmet_2019$count) #significantly better than rpart
 #more significant predictor.  However, it still trails behind day of the year, max temp and 
 #the presence of snow on the ground in terms of predicting
 
-lmet %>% qplot(day_of_year, count, data = ., color = day_of_week, geom = "point")
+lmet %>% qplot(day_of_year, count, data = ., color = day_of_week, geom = "smooth")
 
-coby_revised %>% qplot(day_of_year, count, data = ., color = day_of_week, geom = "point")
+coby_revised %>% qplot(day_of_year, count, data = ., color = day_of_week, geom = "smooth")
 
 
 
